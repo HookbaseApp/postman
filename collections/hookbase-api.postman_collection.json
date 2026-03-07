@@ -1,0 +1,2100 @@
+{
+  "info": {
+    "name": "Hookbase API",
+    "description": "Complete API collection for Hookbase - Webhook routing, transformation, and delivery platform.\n\nAuthentication: All endpoints (except Health and Webhook Ingest) require a Bearer token. Use an API key with the `whr_` prefix.\n\nFor more information, visit https://docs.hookbase.app",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.hookbase.app",
+      "type": "string"
+    },
+    {
+      "key": "orgSlug",
+      "value": "your-org-slug",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "whr_8ffc105e1ab2404481e6cc1e6f6bd603",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{apiKey}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Sources",
+      "description": "Webhook source management. Sources are endpoints that receive incoming webhooks.",
+      "item": [
+        {
+          "name": "List Sources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sources?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "enabled", "value": "true", "disabled": true },
+                { "key": "search", "value": "github", "disabled": true }
+              ]
+            },
+            "description": "List all webhook sources with optional filtering and pagination."
+          }
+        },
+        {
+          "name": "Create Source",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"GitHub Webhooks\",\n  \"slug\": \"github\",\n  \"description\": \"Production GitHub webhooks\",\n  \"provider\": \"github\",\n  \"verificationConfig\": {\n    \"type\": \"github\",\n    \"secret\": \"my-webhook-secret\"\n  },\n  \"rejectInvalidSignatures\": true,\n  \"dedupEnabled\": true,\n  \"dedupStrategy\": \"provider_id\",\n  \"dedupWindowHours\": 24\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sources",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources"]
+            },
+            "description": "Create a new webhook source. The webhook URL will be: https://api.hookbase.app/ingest/{orgSlug}/{sourceSlug}\n\nProviders: github, stripe, shopify, slack, twilio, custom, generic"
+          }
+        },
+        {
+          "name": "Get Source",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/:sourceId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", ":sourceId"],
+              "variable": [
+                { "key": "sourceId", "value": "src_abc123" }
+              ]
+            },
+            "description": "Get source details including webhook URL, verification config, and event count."
+          }
+        },
+        {
+          "name": "Update Source",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"GitHub Production (Updated)\",\n  \"description\": \"Updated description\",\n  \"enabled\": true,\n  \"rejectInvalidSignatures\": true,\n  \"rateLimitPerMinute\": 1000\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/:sourceId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", ":sourceId"],
+              "variable": [
+                { "key": "sourceId", "value": "src_abc123" }
+              ]
+            },
+            "description": "Update source details. The slug cannot be changed after creation."
+          }
+        },
+        {
+          "name": "Delete Source",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/:sourceId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", ":sourceId"],
+              "variable": [
+                { "key": "sourceId", "value": "src_abc123" }
+              ]
+            },
+            "description": "Delete a source. Also deletes all associated events and deliveries."
+          }
+        },
+        {
+          "name": "Rotate Signing Secret",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/:sourceId/rotate-secret",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", ":sourceId", "rotate-secret"],
+              "variable": [
+                { "key": "sourceId", "value": "src_abc123" }
+              ]
+            },
+            "description": "Rotate the signing secret for a source. The old secret is immediately invalidated. The new secret is only shown once."
+          }
+        },
+        {
+          "name": "Export Sources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", "export"],
+              "query": [
+                { "key": "ids", "value": "src_abc123,src_def456", "disabled": true },
+                { "key": "includeSensitive", "value": "false", "disabled": true }
+              ]
+            },
+            "description": "Export sources as a JSON file for backup or migration. Signing secrets are redacted by default."
+          }
+        },
+        {
+          "name": "Import Sources",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sources\": [\n    {\n      \"name\": \"Stripe Payments\",\n      \"slug\": \"stripe\",\n      \"provider\": \"stripe\",\n      \"rejectInvalidSignatures\": true,\n      \"isActive\": true\n    }\n  ],\n  \"conflictStrategy\": \"skip\",\n  \"validateOnly\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", "import"]
+            },
+            "description": "Import sources from a JSON export file. Conflict strategies: skip, rename, overwrite. Set validateOnly to true for a dry run."
+          }
+        },
+        {
+          "name": "Bulk Delete Sources",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"src_abc123\", \"src_def456\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", "bulk"]
+            },
+            "description": "Delete multiple sources in a single request. Also deletes all associated events and deliveries."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Destinations",
+      "description": "Webhook destination management. Destinations are endpoints where webhooks get delivered.",
+      "item": [
+        {
+          "name": "List Destinations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "enabled", "value": "true", "disabled": true },
+                { "key": "search", "value": "production", "disabled": true }
+              ]
+            },
+            "description": "List all webhook destinations with optional filtering and pagination."
+          }
+        },
+        {
+          "name": "Create Destination",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Production API\",\n  \"url\": \"https://api.yourapp.com/webhooks/handler\",\n  \"method\": \"POST\",\n  \"description\": \"Main webhook handler\",\n  \"headers\": {\n    \"X-Custom-Header\": \"value\"\n  },\n  \"authType\": \"bearer\",\n  \"authConfig\": {\n    \"token\": \"sk_live_abc123\"\n  },\n  \"timeoutMs\": 30000,\n  \"retryPolicy\": {\n    \"maxRetries\": 5,\n    \"initialDelay\": 1000,\n    \"maxDelay\": 60000,\n    \"backoffMultiplier\": 2\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations"]
+            },
+            "description": "Create a new webhook destination.\n\nAuth types: none, basic, bearer, api_key, custom_header"
+          }
+        },
+        {
+          "name": "Create Warehouse Destination (S3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"S3 Archive\",\n  \"type\": \"s3\",\n  \"warehouseConfig\": {\n    \"bucket\": \"my-webhook-archive\",\n    \"region\": \"us-east-1\",\n    \"accessKeyId\": \"AKIAIOSFODNN7EXAMPLE\",\n    \"secretAccessKey\": \"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\",\n    \"prefix\": \"webhooks/\",\n    \"fileFormat\": \"jsonl\",\n    \"partitionBy\": \"date\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations"]
+            },
+            "description": "Create a warehouse destination that archives webhooks to an S3 bucket. Requires Pro or Business plan."
+          }
+        },
+        {
+          "name": "Create Warehouse Destination (R2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"R2 Archive\",\n  \"type\": \"r2\",\n  \"warehouseConfig\": {\n    \"bucket\": \"my-webhook-archive\",\n    \"endpoint\": \"https://ACCOUNT_ID.r2.cloudflarestorage.com\",\n    \"accessKeyId\": \"your-r2-access-key-id\",\n    \"secretAccessKey\": \"your-r2-secret-access-key\",\n    \"prefix\": \"webhooks/\",\n    \"fileFormat\": \"jsonl\",\n    \"partitionBy\": \"date\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations"]
+            },
+            "description": "Create a warehouse destination that archives webhooks to a Cloudflare R2 bucket via S3-compatible API. Requires Pro or Business plan."
+          }
+        },
+        {
+          "name": "Create Warehouse Destination (GCS)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"GCS Archive\",\n  \"type\": \"gcs\",\n  \"warehouseConfig\": {\n    \"bucket\": \"my-gcs-bucket\",\n    \"projectId\": \"my-gcp-project\",\n    \"serviceAccountKey\": \"{\\\"type\\\":\\\"service_account\\\",\\\"project_id\\\":\\\"...\\\"}\",\n    \"prefix\": \"webhooks/\",\n    \"fileFormat\": \"jsonl\",\n    \"partitionBy\": \"date\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations"]
+            },
+            "description": "Create a warehouse destination that archives webhooks to a Google Cloud Storage bucket. Requires Pro or Business plan."
+          }
+        },
+        {
+          "name": "Create Warehouse Destination (Azure Blob)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Azure Archive\",\n  \"type\": \"azure_blob\",\n  \"warehouseConfig\": {\n    \"storageAccount\": \"myaccount\",\n    \"container\": \"webhooks\",\n    \"sasToken\": \"sv=2022-11-02&ss=b&srt=co&sp=rwdlaciytfx&se=...\",\n    \"prefix\": \"webhooks/\",\n    \"fileFormat\": \"jsonl\",\n    \"partitionBy\": \"date\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations"]
+            },
+            "description": "Create a warehouse destination that archives webhooks to Azure Blob Storage. Requires Pro or Business plan."
+          }
+        },
+        {
+          "name": "Get Destination",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/:destinationId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", ":destinationId"],
+              "variable": [
+                { "key": "destinationId", "value": "dst_xyz789" }
+              ]
+            },
+            "description": "Get destination details including retry policy, auth config, and delivery stats."
+          }
+        },
+        {
+          "name": "Update Destination",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Production API v2\",\n  \"url\": \"https://api.yourapp.com/webhooks/v2/handler\",\n  \"retryPolicy\": {\n    \"maxRetries\": 10\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/:destinationId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", ":destinationId"],
+              "variable": [
+                { "key": "destinationId", "value": "dst_xyz789" }
+              ]
+            },
+            "description": "Update destination details. All fields are optional."
+          }
+        },
+        {
+          "name": "Delete Destination",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/:destinationId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", ":destinationId"],
+              "variable": [
+                { "key": "destinationId", "value": "dst_xyz789" }
+              ]
+            },
+            "description": "Delete a destination. Removes it from all routes. Delivery history is preserved."
+          }
+        },
+        {
+          "name": "Test Destination",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"event\": \"test\",\n    \"timestamp\": \"2024-01-15T10:30:00Z\",\n    \"data\": {\n      \"message\": \"Test webhook from Hookbase\"\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/:destinationId/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", ":destinationId", "test"],
+              "variable": [
+                { "key": "destinationId", "value": "dst_xyz789" }
+              ]
+            },
+            "description": "Send a test webhook to verify the destination is reachable and configured correctly."
+          }
+        },
+        {
+          "name": "Get Destination Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/:destinationId/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", ":destinationId", "health"],
+              "variable": [
+                { "key": "destinationId", "value": "dst_xyz789" }
+              ]
+            },
+            "description": "Get health metrics for a destination including success rate, latency percentiles, and status."
+          }
+        },
+        {
+          "name": "Export Destinations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", "export"],
+              "query": [
+                { "key": "ids", "value": "dst_abc123,dst_def456", "disabled": true },
+                { "key": "includeSensitive", "value": "false", "disabled": true }
+              ]
+            },
+            "description": "Export destinations as a JSON file for backup or migration. Auth credentials are redacted by default."
+          }
+        },
+        {
+          "name": "Import Destinations",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"destinations\": [\n    {\n      \"name\": \"Staging API\",\n      \"slug\": \"staging-api\",\n      \"url\": \"https://staging.yourapp.com/webhooks\",\n      \"method\": \"POST\",\n      \"timeoutMs\": 30000,\n      \"isActive\": true\n    }\n  ],\n  \"conflictStrategy\": \"skip\",\n  \"validateOnly\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", "import"]
+            },
+            "description": "Import destinations from a JSON export file. Conflict strategies: skip, rename, overwrite."
+          }
+        },
+        {
+          "name": "Bulk Delete Destinations",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"dst_abc123\", \"dst_def456\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", "bulk"]
+            },
+            "description": "Delete multiple destinations in a single request."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Routes",
+      "description": "Webhook routing configuration. Routes connect sources to destinations with optional transforms and filters.",
+      "item": [
+        {
+          "name": "List Routes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "enabled", "value": "true", "disabled": true },
+                { "key": "sourceId", "value": "src_abc123", "disabled": true },
+                { "key": "destinationId", "value": "dst_xyz789", "disabled": true }
+              ]
+            },
+            "description": "List all routes with optional filtering by enabled status, source, or destination."
+          }
+        },
+        {
+          "name": "Create Route",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"GitHub to Slack\",\n  \"sourceId\": \"src_abc123\",\n  \"destinationIds\": [\"dst_slack1\", \"dst_slack2\"],\n  \"transformId\": \"tfm_format123\",\n  \"filterId\": \"flt_pushonly456\",\n  \"priority\": 10,\n  \"enabled\": true,\n  \"failoverDestinationIds\": [\"dst_backup1\"],\n  \"failoverAfterAttempts\": 3,\n  \"circuitCooldownSeconds\": 300,\n  \"circuitFailureThreshold\": 5,\n  \"notifyOnFailure\": true,\n  \"notifyOnRecovery\": true,\n  \"notifyEmails\": \"team@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/routes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes"]
+            },
+            "description": "Create a new route connecting a source to one or more destinations. Supports transforms, filters, failover, and circuit breaker configuration."
+          }
+        },
+        {
+          "name": "Get Route",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/:routeId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", ":routeId"],
+              "variable": [
+                { "key": "routeId", "value": "rte_abc123" }
+              ]
+            },
+            "description": "Get route details with expanded source, destinations, transform, and filter."
+          }
+        },
+        {
+          "name": "Update Route",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"GitHub to Slack (Updated)\",\n  \"enabled\": false,\n  \"filterId\": null,\n  \"priority\": 20\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/:routeId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", ":routeId"],
+              "variable": [
+                { "key": "routeId", "value": "rte_abc123" }
+              ]
+            },
+            "description": "Update route configuration. The sourceId cannot be changed after creation."
+          }
+        },
+        {
+          "name": "Delete Route",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/:routeId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", ":routeId"],
+              "variable": [
+                { "key": "routeId", "value": "rte_abc123" }
+              ]
+            },
+            "description": "Delete a route. Does not delete the source, destinations, transform, or filter."
+          }
+        },
+        {
+          "name": "Get Route Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/:routeId/stats?period=24h",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", ":routeId", "stats"],
+              "query": [
+                { "key": "period", "value": "24h", "description": "Options: 1h, 24h, 7d, 30d" }
+              ],
+              "variable": [
+                { "key": "routeId", "value": "rte_abc123" }
+              ]
+            },
+            "description": "Get statistics for a route over a specified time period."
+          }
+        },
+        {
+          "name": "Get Circuit Breaker Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/:routeId/circuit-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", ":routeId", "circuit-status"],
+              "variable": [
+                { "key": "routeId", "value": "rte_abc123" }
+              ]
+            },
+            "description": "Get the current circuit breaker state for a route. States: closed, open, half_open."
+          }
+        },
+        {
+          "name": "Reset Circuit Breaker",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/:routeId/reset-circuit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", ":routeId", "reset-circuit"],
+              "variable": [
+                { "key": "routeId", "value": "rte_abc123" }
+              ]
+            },
+            "description": "Manually reset the circuit breaker to closed state."
+          }
+        },
+        {
+          "name": "Update Circuit Breaker Config",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"circuitFailureThreshold\": 10,\n  \"circuitCooldownSeconds\": 600,\n  \"circuitProbeSuccessThreshold\": 3\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/:routeId/circuit-config",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", ":routeId", "circuit-config"],
+              "variable": [
+                { "key": "routeId", "value": "rte_abc123" }
+              ]
+            },
+            "description": "Update the circuit breaker configuration for a route."
+          }
+        },
+        {
+          "name": "Export Routes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "export"],
+              "query": [
+                { "key": "ids", "value": "rte_abc123,rte_def456", "disabled": true }
+              ]
+            },
+            "description": "Export routes as a portable JSON file using slugs instead of IDs."
+          }
+        },
+        {
+          "name": "Import Routes",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routes\": [\n    {\n      \"name\": \"Stripe to Slack\",\n      \"sourceSlug\": \"stripe-webhooks\",\n      \"destinationSlug\": \"slack-notifications\",\n      \"filterSlug\": \"payment-events\",\n      \"priority\": 10,\n      \"isActive\": true\n    }\n  ],\n  \"conflictStrategy\": \"skip\",\n  \"validateOnly\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "import"]
+            },
+            "description": "Import routes from a JSON export file. All referenced sources, destinations, filters, and transforms must exist."
+          }
+        },
+        {
+          "name": "Bulk Pause Routes",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routeIds\": [\"rte_abc123\", \"rte_def456\", \"rte_ghi789\"],\n  \"isActive\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/bulk-pause",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "bulk-pause"]
+            },
+            "description": "Pause or resume multiple routes at once. Set isActive to false to pause, true to resume."
+          }
+        },
+        {
+          "name": "Bulk Delete Routes",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routeIds\": [\"rte_abc123\", \"rte_def456\", \"rte_ghi789\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/bulk-delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "bulk-delete"]
+            },
+            "description": "Delete multiple routes at once. This action is irreversible."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "description": "Webhook event management. Events are webhook payloads received by sources.",
+      "item": [
+        {
+          "name": "List Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "sourceId", "value": "src_abc123", "disabled": true },
+                { "key": "status", "value": "delivered", "disabled": true },
+                { "key": "from", "value": "2024-01-01T00:00:00Z", "disabled": true },
+                { "key": "to", "value": "2024-01-31T23:59:59Z", "disabled": true },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "signatureValid", "value": "true", "disabled": true }
+              ]
+            },
+            "description": "List webhook events with optional filtering by source, status, date range, and more."
+          }
+        },
+        {
+          "name": "Get Event",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events/:eventId?includePayload=true&includeDeliveries=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", ":eventId"],
+              "query": [
+                { "key": "includePayload", "value": "true" },
+                { "key": "includeDeliveries", "value": "true" }
+              ],
+              "variable": [
+                { "key": "eventId", "value": "evt_abc123" }
+              ]
+            },
+            "description": "Get event details including optional payload and delivery attempts."
+          }
+        },
+        {
+          "name": "Get Event Payload",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events/:eventId/payload",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", ":eventId", "payload"],
+              "variable": [
+                { "key": "eventId", "value": "evt_abc123" }
+              ]
+            },
+            "description": "Get the raw webhook payload as received."
+          }
+        },
+        {
+          "name": "Get Event Deliveries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events/:eventId/deliveries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", ":eventId", "deliveries"],
+              "query": [
+                { "key": "status", "value": "failed", "disabled": true }
+              ],
+              "variable": [
+                { "key": "eventId", "value": "evt_abc123" }
+              ]
+            },
+            "description": "Get all deliveries for a specific event."
+          }
+        },
+        {
+          "name": "Get Event Timeline",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events/:eventId/timeline",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", ":eventId", "timeline"],
+              "variable": [
+                { "key": "eventId", "value": "evt_abc123" }
+              ]
+            },
+            "description": "Get detailed timing information for an event including receive, validate, queue, and delivery timestamps."
+          }
+        },
+        {
+          "name": "Replay Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"destinationIds\": [\"dst_slack1\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events/:eventId/replay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", ":eventId", "replay"],
+              "variable": [
+                { "key": "eventId", "value": "evt_abc123" }
+              ]
+            },
+            "description": "Replay an event to all or specific destinations. Omit destinationIds to replay to all."
+          }
+        },
+        {
+          "name": "Bulk Replay Events",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventIds\": [\"evt_abc123\", \"evt_def456\", \"evt_ghi789\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events/bulk/replay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", "bulk", "replay"]
+            },
+            "description": "Replay multiple events at once."
+          }
+        },
+        {
+          "name": "Delete Event",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events/:eventId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", ":eventId"],
+              "variable": [
+                { "key": "eventId", "value": "evt_abc123" }
+              ]
+            },
+            "description": "Delete an event and all associated deliveries and stored payload."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deliveries",
+      "description": "Webhook delivery management. Deliveries represent attempts to send webhooks to destinations.",
+      "item": [
+        {
+          "name": "List Deliveries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/deliveries?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "deliveries"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "status", "value": "failed", "disabled": true },
+                { "key": "eventId", "value": "evt_abc123", "disabled": true },
+                { "key": "destinationId", "value": "dst_xyz789", "disabled": true },
+                { "key": "routeId", "value": "rte_abc123", "disabled": true },
+                { "key": "from", "value": "2024-01-01T00:00:00Z", "disabled": true },
+                { "key": "to", "value": "2024-01-31T23:59:59Z", "disabled": true }
+              ]
+            },
+            "description": "List webhook deliveries with optional filtering by status, event, destination, route, and date range."
+          }
+        },
+        {
+          "name": "Get Delivery",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/deliveries/:deliveryId?includeAttempts=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "deliveries", ":deliveryId"],
+              "query": [
+                { "key": "includeAttempts", "value": "true" }
+              ],
+              "variable": [
+                { "key": "deliveryId", "value": "dlv_abc123" }
+              ]
+            },
+            "description": "Get delivery details including all retry attempts."
+          }
+        },
+        {
+          "name": "Retry Delivery",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/deliveries/:deliveryId/retry",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "deliveries", ":deliveryId", "retry"],
+              "variable": [
+                { "key": "deliveryId", "value": "dlv_abc123" }
+              ]
+            },
+            "description": "Manually retry a failed delivery. Resets the attempt count and queues for immediate retry."
+          }
+        },
+        {
+          "name": "Bulk Replay Deliveries",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deliveryIds\": [\"dlv_abc123\", \"dlv_def456\", \"dlv_ghi789\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/deliveries/bulk-replay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "deliveries", "bulk-replay"]
+            },
+            "description": "Replay multiple failed deliveries in a single request (up to 100). Only deliveries with status failed or circuit_open can be replayed."
+          }
+        },
+        {
+          "name": "Get Delivery Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/deliveries/stats?period=24h",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "deliveries", "stats"],
+              "query": [
+                { "key": "period", "value": "24h", "description": "Options: 1h, 24h, 7d, 30d" },
+                { "key": "destinationId", "value": "dst_xyz789", "disabled": true }
+              ]
+            },
+            "description": "Get delivery statistics including success rate and latency percentiles."
+          }
+        },
+        {
+          "name": "List Dead Letter Queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/deliveries/dead-letter?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "deliveries", "dead-letter"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "destinationId", "value": "dst_xyz789", "disabled": true },
+                { "key": "from", "value": "2024-01-01T00:00:00Z", "disabled": true },
+                { "key": "to", "value": "2024-01-31T23:59:59Z", "disabled": true }
+              ]
+            },
+            "description": "List messages in the dead letter queue for manual review."
+          }
+        },
+        {
+          "name": "Requeue DLQ Message",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/deliveries/dead-letter/:dlqId/requeue",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "deliveries", "dead-letter", ":dlqId", "requeue"],
+              "variable": [
+                { "key": "dlqId", "value": "dlq_abc123" }
+              ]
+            },
+            "description": "Requeue a message from the dead letter queue for delivery."
+          }
+        },
+        {
+          "name": "Delete DLQ Message",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/deliveries/dead-letter/:dlqId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "deliveries", "dead-letter", ":dlqId"],
+              "variable": [
+                { "key": "dlqId", "value": "dlq_abc123" }
+              ]
+            },
+            "description": "Delete a message from the dead letter queue."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transforms",
+      "description": "Payload transformation configuration. Transforms modify webhook payloads before delivery using JSONata, JavaScript, Liquid, or XSLT.",
+      "item": [
+        {
+          "name": "List Transforms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "search", "value": "slack", "disabled": true },
+                { "key": "type", "value": "jsonata", "disabled": true }
+              ]
+            },
+            "description": "List all transforms with optional search and type filtering."
+          }
+        },
+        {
+          "name": "Create Transform",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"GitHub to Slack Formatter\",\n  \"description\": \"Format GitHub push events for Slack\",\n  \"type\": \"jsonata\",\n  \"code\": \"{ \\\"text\\\": \\\"New push to \\\" & repository.full_name & \\\" by \\\" & pusher.name }\",\n  \"inputFormat\": \"json\",\n  \"outputFormat\": \"json\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms"]
+            },
+            "description": "Create a new transform. Types: jsonata, javascript, liquid, xslt. Code is validated on creation."
+          }
+        },
+        {
+          "name": "Get Transform",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms/:transformId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms", ":transformId"],
+              "variable": [
+                { "key": "transformId", "value": "tfm_abc123" }
+              ]
+            },
+            "description": "Get transform details including code and usage count."
+          }
+        },
+        {
+          "name": "Update Transform",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Slack Formatter\",\n  \"code\": \"{ \\\"text\\\": \\\"[\\\" & repository.full_name & \\\"] \\\" & pusher.name & \\\" pushed \\\" & $count(commits) & \\\" commits\\\" }\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms/:transformId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms", ":transformId"],
+              "variable": [
+                { "key": "transformId", "value": "tfm_abc123" }
+              ]
+            },
+            "description": "Update a transform. All fields are optional."
+          }
+        },
+        {
+          "name": "Delete Transform",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms/:transformId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms", ":transformId"],
+              "variable": [
+                { "key": "transformId", "value": "tfm_abc123" }
+              ]
+            },
+            "description": "Delete a transform. Cannot delete if assigned to active routes."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Filters",
+      "description": "Event filtering configuration. Filters control which webhook events are forwarded through a route.",
+      "item": [
+        {
+          "name": "List Filters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/filters?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "search", "value": "push", "disabled": true }
+              ]
+            },
+            "description": "List all filters with optional search."
+          }
+        },
+        {
+          "name": "Create Filter",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Production Push Events\",\n  \"description\": \"Only forward push events to main branch\",\n  \"conditions\": [\n    {\n      \"field\": \"headers.X-GitHub-Event\",\n      \"operator\": \"equals\",\n      \"value\": \"push\"\n    },\n    {\n      \"field\": \"payload.ref\",\n      \"operator\": \"equals\",\n      \"value\": \"refs/heads/main\"\n    }\n  ],\n  \"logic\": \"AND\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/filters",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters"]
+            },
+            "description": "Create a new filter. Operators: equals, not_equals, contains, not_contains, starts_with, ends_with, matches, exists, not_exists, gt, gte, lt, lte, in, not_in. Logic: AND or OR."
+          }
+        },
+        {
+          "name": "Get Filter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/filters/:filterId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters", ":filterId"],
+              "variable": [
+                { "key": "filterId", "value": "flt_abc123" }
+              ]
+            },
+            "description": "Get filter details including conditions and usage count."
+          }
+        },
+        {
+          "name": "Update Filter",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"CI Events Filter\",\n  \"conditions\": [\n    {\n      \"field\": \"headers.X-GitHub-Event\",\n      \"operator\": \"in\",\n      \"value\": \"push,pull_request,release\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/filters/:filterId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters", ":filterId"],
+              "variable": [
+                { "key": "filterId", "value": "flt_abc123" }
+              ]
+            },
+            "description": "Update a filter. Conditions replace existing ones entirely."
+          }
+        },
+        {
+          "name": "Delete Filter",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/filters/:filterId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters", ":filterId"],
+              "variable": [
+                { "key": "filterId", "value": "flt_abc123" }
+              ]
+            },
+            "description": "Delete a filter. Cannot delete if assigned to active routes."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schemas",
+      "description": "JSON Schema validation. Schemas define the expected structure of webhook payloads.",
+      "item": [
+        {
+          "name": "List Schemas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/schemas?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schemas"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "search", "value": "github", "disabled": true }
+              ]
+            },
+            "description": "List all schemas with optional search."
+          }
+        },
+        {
+          "name": "Create Schema",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"GitHub Push Event\",\n  \"description\": \"Validates GitHub push webhook payloads\",\n  \"schema\": {\n    \"type\": \"object\",\n    \"required\": [\"ref\", \"repository\", \"pusher\"],\n    \"properties\": {\n      \"ref\": { \"type\": \"string\" },\n      \"repository\": {\n        \"type\": \"object\",\n        \"required\": [\"full_name\"],\n        \"properties\": {\n          \"full_name\": { \"type\": \"string\" }\n        }\n      },\n      \"pusher\": {\n        \"type\": \"object\",\n        \"required\": [\"name\"],\n        \"properties\": {\n          \"name\": { \"type\": \"string\" }\n        }\n      }\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/schemas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schemas"]
+            },
+            "description": "Create a new JSON Schema (draft-07) for webhook payload validation."
+          }
+        },
+        {
+          "name": "Get Schema",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/schemas/:schemaId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schemas", ":schemaId"],
+              "variable": [
+                { "key": "schemaId", "value": "sch_abc123" }
+              ]
+            },
+            "description": "Get schema details including the full JSON Schema definition."
+          }
+        },
+        {
+          "name": "Update Schema",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"GitHub Push Event v2\",\n  \"schema\": {\n    \"type\": \"object\",\n    \"required\": [\"ref\", \"repository\", \"pusher\", \"commits\"],\n    \"properties\": {\n      \"ref\": { \"type\": \"string\" },\n      \"commits\": { \"type\": \"array\", \"minItems\": 1 }\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/schemas/:schemaId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schemas", ":schemaId"],
+              "variable": [
+                { "key": "schemaId", "value": "sch_abc123" }
+              ]
+            },
+            "description": "Update a schema. Updating the schema field auto-increments the version number."
+          }
+        },
+        {
+          "name": "Delete Schema",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/schemas/:schemaId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schemas", ":schemaId"],
+              "variable": [
+                { "key": "schemaId", "value": "sch_abc123" }
+              ]
+            },
+            "description": "Delete a schema. Cannot delete if assigned to active routes."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "description": "Real-time and historical analytics for webhook events, deliveries, and source performance.",
+      "item": [
+        {
+          "name": "Get Analytics Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics?period=24h",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics"],
+              "query": [
+                { "key": "period", "value": "24h", "description": "Options: 1h, 24h, 7d, 30d" },
+                { "key": "sourceId", "value": "src_abc123", "disabled": true },
+                { "key": "destinationId", "value": "dst_xyz789", "disabled": true }
+              ]
+            },
+            "description": "Get analytics overview including totals, source breakdown, destination metrics, and status breakdown."
+          }
+        },
+        {
+          "name": "Get Events Timeline",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/events-timeline?period=24h",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "events-timeline"],
+              "query": [
+                { "key": "period", "value": "24h", "description": "Options: 1h, 24h, 7d, 30d" },
+                { "key": "sourceId", "value": "src_abc123", "disabled": true },
+                { "key": "interval", "value": "1h", "disabled": true, "description": "Options: 1m, 5m, 1h, 1d" }
+              ]
+            },
+            "description": "Get time-bucketed event counts for charting."
+          }
+        },
+        {
+          "name": "Real-Time Stream (SSE)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "text/event-stream" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/stream",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "stream"]
+            },
+            "description": "Server-Sent Events (SSE) stream for real-time dashboard updates. Event types: stats, event, delivery, alert."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tunnels",
+      "description": "Local development tunnel management. Tunnels expose local development servers to receive webhooks.",
+      "item": [
+        {
+          "name": "List Tunnels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels"]
+            },
+            "description": "List all tunnels for the organization."
+          }
+        },
+        {
+          "name": "Create Tunnel",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dev Server\",\n  \"subdomain\": \"my-dev-tunnel\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels"]
+            },
+            "description": "Create a new tunnel for local development. Custom subdomains require Pro plan. Response includes tunnelUrl, wsUrl, and authToken."
+          }
+        },
+        {
+          "name": "Get Tunnel",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels/:tunnelId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels", ":tunnelId"],
+              "variable": [
+                { "key": "tunnelId", "value": "tun_abc123" }
+              ]
+            },
+            "description": "Get tunnel details."
+          }
+        },
+        {
+          "name": "Update Tunnel",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Tunnel Name\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels/:tunnelId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels", ":tunnelId"],
+              "variable": [
+                { "key": "tunnelId", "value": "tun_abc123" }
+              ]
+            },
+            "description": "Update tunnel properties."
+          }
+        },
+        {
+          "name": "Delete Tunnel",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels/:tunnelId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels", ":tunnelId"],
+              "variable": [
+                { "key": "tunnelId", "value": "tun_abc123" }
+              ]
+            },
+            "description": "Permanently delete a tunnel."
+          }
+        },
+        {
+          "name": "Get Tunnel Live Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels/:tunnelId/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels", ":tunnelId", "status"],
+              "variable": [
+                { "key": "tunnelId", "value": "tun_abc123" }
+              ]
+            },
+            "description": "Get real-time status information including connection state and client IP."
+          }
+        },
+        {
+          "name": "Regenerate Tunnel Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels/:tunnelId/regenerate-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels", ":tunnelId", "regenerate-token"],
+              "variable": [
+                { "key": "tunnelId", "value": "tun_abc123" }
+              ]
+            },
+            "description": "Generate a new authentication token for connecting to the tunnel via WebSocket."
+          }
+        },
+        {
+          "name": "Disconnect Tunnel",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels/:tunnelId/disconnect",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels", ":tunnelId", "disconnect"],
+              "variable": [
+                { "key": "tunnelId", "value": "tun_abc123" }
+              ]
+            },
+            "description": "Force disconnect an active tunnel connection."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cron Jobs",
+      "description": "Scheduled webhook triggers. Schedule recurring HTTP requests to run automatically.",
+      "item": [
+        {
+          "name": "List Cron Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron"]
+            },
+            "description": "List all cron jobs for the organization."
+          }
+        },
+        {
+          "name": "Create Cron Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Daily Cleanup\",\n  \"description\": \"Clean up old data daily at 3am ET\",\n  \"cronExpression\": \"0 3 * * *\",\n  \"timezone\": \"America/New_York\",\n  \"url\": \"https://api.example.com/cleanup\",\n  \"method\": \"POST\",\n  \"headers\": {\n    \"Authorization\": \"Bearer api-key-here\",\n    \"Content-Type\": \"application/json\"\n  },\n  \"payload\": \"{\\\"older_than_days\\\": 30}\",\n  \"timeoutMs\": 60000\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cron",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron"]
+            },
+            "description": "Create a new cron job. Uses standard 5-field cron expressions: minute hour day month weekday."
+          }
+        },
+        {
+          "name": "Get Cron Job",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron/:jobId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron", ":jobId"],
+              "variable": [
+                { "key": "jobId", "value": "cj_abc123" }
+              ]
+            },
+            "description": "Get cron job details including schedule, next/last run times, and configuration."
+          }
+        },
+        {
+          "name": "Update Cron Job",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cronExpression\": \"*/30 * * * *\",\n  \"isActive\": true,\n  \"timeoutMs\": 45000\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cron/:jobId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron", ":jobId"],
+              "variable": [
+                { "key": "jobId", "value": "cj_abc123" }
+              ]
+            },
+            "description": "Update a cron job. All fields are optional."
+          }
+        },
+        {
+          "name": "Delete Cron Job",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron/:jobId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron", ":jobId"],
+              "variable": [
+                { "key": "jobId", "value": "cj_abc123" }
+              ]
+            },
+            "description": "Delete a cron job and all its execution history."
+          }
+        },
+        {
+          "name": "Trigger Cron Job",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron/:jobId/trigger",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron", ":jobId", "trigger"],
+              "variable": [
+                { "key": "jobId", "value": "cj_abc123" }
+              ]
+            },
+            "description": "Execute a cron job immediately, regardless of its schedule."
+          }
+        },
+        {
+          "name": "Get Cron Executions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron/:jobId/executions?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron", ":jobId", "executions"],
+              "query": [
+                { "key": "limit", "value": "20" }
+              ],
+              "variable": [
+                { "key": "jobId", "value": "cj_abc123" }
+              ]
+            },
+            "description": "Get execution history for a cron job."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cron Groups",
+      "description": "Cron group management. Groups organize cron jobs into logical collections.",
+      "item": [
+        {
+          "name": "List Cron Groups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron-groups",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron-groups"]
+            },
+            "description": "List all cron groups."
+          }
+        },
+        {
+          "name": "Create Cron Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Health Checks\",\n  \"description\": \"Periodic health check webhooks\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cron-groups",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron-groups"]
+            },
+            "description": "Create a new cron group to organize cron jobs."
+          }
+        },
+        {
+          "name": "Get Cron Group",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron-groups/:groupId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron-groups", ":groupId"],
+              "variable": [
+                { "key": "groupId", "value": "cgrp_abc123" }
+              ]
+            },
+            "description": "Get cron group details with its associated cron jobs."
+          }
+        },
+        {
+          "name": "Update Cron Group",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Health Checks (Updated)\",\n  \"description\": \"Updated description\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cron-groups/:groupId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron-groups", ":groupId"],
+              "variable": [
+                { "key": "groupId", "value": "cgrp_abc123" }
+              ]
+            },
+            "description": "Update a cron group name or description."
+          }
+        },
+        {
+          "name": "Delete Cron Group",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron-groups/:groupId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron-groups", ":groupId"],
+              "variable": [
+                { "key": "groupId", "value": "cgrp_abc123" }
+              ]
+            },
+            "description": "Delete a cron group. Jobs within the group are moved to Ungrouped, not deleted."
+          }
+        },
+        {
+          "name": "Reorder Cron Groups",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupIds\": [\"cgrp_def456\", \"cgrp_abc123\", \"cgrp_new123\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cron-groups/reorder",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron-groups", "reorder"]
+            },
+            "description": "Reorder cron groups by providing group IDs in the desired order."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Custom Domains",
+      "description": "Manage custom domains for webhook ingestion and tunnel endpoints.",
+      "item": [
+        {
+          "name": "List Custom Domains",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/custom-domains",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "custom-domains"]
+            },
+            "description": "List all custom domains for the organization."
+          }
+        },
+        {
+          "name": "Create Custom Domain",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"domain\": \"webhooks.yourapp.com\",\n  \"type\": \"source\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/custom-domains",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "custom-domains"]
+            },
+            "description": "Create a new custom domain. Types: source (webhook ingestion), tunnel (tunnel endpoints). Response includes DNS records to configure."
+          }
+        },
+        {
+          "name": "Get Custom Domain",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/custom-domains/:domainId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "custom-domains", ":domainId"],
+              "variable": [
+                { "key": "domainId", "value": "dom_abc123" }
+              ]
+            },
+            "description": "Get custom domain details including verification and SSL status."
+          }
+        },
+        {
+          "name": "Verify Custom Domain",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/custom-domains/:domainId/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "custom-domains", ":domainId", "verify"],
+              "variable": [
+                { "key": "domainId", "value": "dom_abc123" }
+              ]
+            },
+            "description": "Check DNS records and activate the domain if verification passes."
+          }
+        },
+        {
+          "name": "Delete Custom Domain",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/custom-domains/:domainId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "custom-domains", ":domainId"],
+              "variable": [
+                { "key": "domainId", "value": "dom_abc123" }
+              ]
+            },
+            "description": "Delete a custom domain. Reverts all URLs to the default api.hookbase.app domain."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "description": "Query audit logs for all actions performed within an organization.",
+      "item": [
+        {
+          "name": "List Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs?page=1&pageSize=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit-logs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "50" },
+                { "key": "action", "value": "source.created", "disabled": true },
+                { "key": "entityType", "value": "source", "disabled": true },
+                { "key": "userId", "value": "usr_abc123", "disabled": true },
+                { "key": "from", "value": "2024-01-01T00:00:00Z", "disabled": true },
+                { "key": "to", "value": "2024-01-31T23:59:59Z", "disabled": true }
+              ]
+            },
+            "description": "List audit logs with optional filtering by action, entity type, user, and date range."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification Channels",
+      "description": "Notification channel management. Define where alerts are sent for route failures, recoveries, and other events.",
+      "item": [
+        {
+          "name": "List Notification Channels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels"]
+            },
+            "description": "List all notification channels."
+          }
+        },
+        {
+          "name": "Create Notification Channel",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Slack #alerts\",\n  \"type\": \"slack\",\n  \"config\": {\n    \"webhookUrl\": \"https://hooks.slack.com/services/T.../B.../xxx\"\n  },\n  \"enabled\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels"]
+            },
+            "description": "Create a new notification channel. Types: slack, teams, discord, pagerduty, email, webhook."
+          }
+        },
+        {
+          "name": "Get Notification Channel",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/:channelId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", ":channelId"],
+              "variable": [
+                { "key": "channelId", "value": "nch_abc123" }
+              ]
+            },
+            "description": "Get notification channel details."
+          }
+        },
+        {
+          "name": "Update Notification Channel",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Slack #alerts (Updated)\",\n  \"enabled\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/:channelId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", ":channelId"],
+              "variable": [
+                { "key": "channelId", "value": "nch_abc123" }
+              ]
+            },
+            "description": "Update a notification channel name, config, or enabled status."
+          }
+        },
+        {
+          "name": "Delete Notification Channel",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/:channelId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", ":channelId"],
+              "variable": [
+                { "key": "channelId", "value": "nch_abc123" }
+              ]
+            },
+            "description": "Delete a notification channel."
+          }
+        },
+        {
+          "name": "Test Notification Channel",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/:channelId/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", ":channelId", "test"],
+              "variable": [
+                { "key": "channelId", "value": "nch_abc123" }
+              ]
+            },
+            "description": "Send a test notification to verify the channel is configured correctly."
+          }
+        }
+      ]
+    },
+    {
+      "name": "API Keys",
+      "description": "API key management for programmatic access to the Hookbase API.",
+      "item": [
+        {
+          "name": "List API Keys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/api-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "api-keys"]
+            },
+            "description": "List all API keys for the organization. Key values are masked."
+          }
+        },
+        {
+          "name": "Create API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"CI/CD Pipeline\",\n  \"scopes\": [\"read\", \"write\"],\n  \"expiresInDays\": 90\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/api-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "api-keys"]
+            },
+            "description": "Create a new API key. The key value is only shown once in the response. Scopes: read, write."
+          }
+        },
+        {
+          "name": "Revoke API Key",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/api-keys/:keyId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "api-keys", ":keyId"],
+              "variable": [
+                { "key": "keyId", "value": "key_abc123" }
+              ]
+            },
+            "description": "Permanently revoke an API key. This action cannot be undone."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhook Ingest",
+      "description": "Send webhooks to Hookbase sources. No authentication required.",
+      "item": [
+        {
+          "name": "Send Webhook",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"push\",\n  \"repository\": {\n    \"full_name\": \"myorg/myrepo\"\n  },\n  \"pusher\": {\n    \"name\": \"developer\"\n  },\n  \"ref\": \"refs/heads/main\",\n  \"commits\": [\n    {\n      \"id\": \"abc123\",\n      \"message\": \"Update README\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ingest/{{orgSlug}}/:sourceSlug",
+              "host": ["{{baseUrl}}"],
+              "path": ["ingest", "{{orgSlug}}", ":sourceSlug"],
+              "variable": [
+                { "key": "sourceSlug", "value": "github" }
+              ]
+            },
+            "description": "Send a webhook to a source endpoint. No authentication required. URL format: https://api.hookbase.app/ingest/{orgSlug}/{sourceSlug}"
+          }
+        }
+      ]
+    }
+  ]
+}

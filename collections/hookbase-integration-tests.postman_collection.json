@@ -1,0 +1,2638 @@
+{
+  "info": {
+    "_postman_id": "261d7334-752a-4775-88bc-29bd484cb384",
+    "name": "Hookbase API - Integration Tests",
+    "description": "End-to-end integration tests for the Hookbase API. Run the entire collection in order — requests create resources, capture IDs/slugs, and use them in subsequent requests.\n\nSetup: Set the `apiKey` variable to your API key before running.\n\nFlow: Health → Sources → Destinations → Filters → Transforms → Schemas → Routes → Ingest Webhook → Events → Deliveries → Tunnels → Cron Groups → Cron Jobs → Notification Channels → Analytics → Audit Logs → API Keys → Cleanup\n\nA random `testRun` suffix is generated once per collection run to avoid conflicts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "50733792"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Generate a unique testRun suffix once per collection run",
+          "if (!pm.collectionVariables.get('testRun') || pm.collectionVariables.get('testRun') === '') {",
+          "  var suffix = Math.random().toString(36).substring(2, 8);",
+          "  pm.collectionVariables.set('testRun', suffix);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{apiKey}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Health check returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sources",
+      "item": [
+        {
+          "name": "Create Source",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create source returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has source with id, slug, and ingestUrl', function () {",
+                  "  var json = pm.response.json();",
+                  "  var source = json.source || json;",
+                  "  var id = source.id;",
+                  "  pm.expect(id).to.be.a('string');",
+                  "  pm.collectionVariables.set('sourceId', id);",
+                  "",
+                  "  var slug = source.slug;",
+                  "  pm.expect(slug).to.be.a('string');",
+                  "  pm.collectionVariables.set('sourceSlug', slug);",
+                  "",
+                  "  var ingestUrl = source.ingestUrl;",
+                  "  if (ingestUrl) {",
+                  "    pm.collectionVariables.set('ingestUrl', ingestUrl);",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Source {{testRun}}\",\n  \"slug\": \"postman-src-{{testRun}}\",\n  \"provider\": \"custom\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sources",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Sources",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List sources returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has sources array and pagination', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.sources).to.be.an('array');",
+                  "  pm.expect(json.sources.length).to.be.greaterThan(0);",
+                  "  pm.expect(json.pagination).to.be.an('object');",
+                  "  pm.expect(json.pagination.total).to.be.a('number');",
+                  "  pm.expect(json.pagination.page).to.equal(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sources?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Source (by slug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get source returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Source slug matches', function () {",
+                  "  var json = pm.response.json();",
+                  "  var source = json.source || json;",
+                  "  pm.expect(source.slug).to.equal(pm.collectionVariables.get('sourceSlug'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/{{sourceSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", "{{sourceSlug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Source (by slug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update source returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated by Postman integration test\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/{{sourceSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", "{{sourceSlug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Export Sources",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Export sources returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has sources array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.sources).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", "export"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rotate Signing Secret",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Rotate secret returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has new signingSecret', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.signingSecret).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/{{sourceSlug}}/rotate-secret",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", "{{sourceSlug}}", "rotate-secret"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Destinations",
+      "item": [
+        {
+          "name": "Create Destination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create destination returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has destination with id and slug', function () {",
+                  "  var json = pm.response.json();",
+                  "  var dest = json.destination || json;",
+                  "  pm.expect(dest.id).to.be.a('string');",
+                  "  pm.collectionVariables.set('destinationId', dest.id);",
+                  "  pm.expect(dest.slug).to.be.a('string');",
+                  "  pm.collectionVariables.set('destinationSlug', dest.slug);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Dest {{testRun}}\",\n  \"slug\": \"postman-dest-{{testRun}}\",\n  \"url\": \"https://httpbin.org/post\",\n  \"method\": \"POST\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Destinations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List destinations returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has destinations array and pagination', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.destinations).to.be.an('array');",
+                  "  pm.expect(json.destinations.length).to.be.greaterThan(0);",
+                  "  pm.expect(json.pagination).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Destination (by slug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get destination returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Destination slug matches', function () {",
+                  "  var json = pm.response.json();",
+                  "  var dest = json.destination || json;",
+                  "  pm.expect(dest.slug).to.equal(pm.collectionVariables.get('destinationSlug'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/{{destinationSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", "{{destinationSlug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Destination (by slug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update destination returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"headers\": {\"X-Test\": \"postman-integration\"}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/{{destinationSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", "{{destinationSlug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Destination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Test destination returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has connectivity result', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('success');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/{{destinationSlug}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", "{{destinationSlug}}", "test"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Export Destinations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Export destinations returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has destinations array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.destinations).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", "export"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Filters",
+      "item": [
+        {
+          "name": "Create Filter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create filter returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has filter with id and slug', function () {",
+                  "  var json = pm.response.json();",
+                  "  var filter = json.filter || json;",
+                  "  pm.expect(filter.id).to.be.a('string');",
+                  "  pm.collectionVariables.set('filterId', filter.id);",
+                  "  pm.expect(filter.slug).to.be.a('string');",
+                  "  pm.collectionVariables.set('filterSlug', filter.slug);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Filter {{testRun}}\",\n  \"slug\": \"postman-filter-{{testRun}}\",\n  \"conditions\": [\n    {\n      \"field\": \"headers.content-type\",\n      \"operator\": \"contains\",\n      \"value\": \"json\"\n    }\n  ],\n  \"logic\": \"and\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/filters",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Filters",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List filters returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has filters array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.filters).to.be.an('array');",
+                  "  pm.expect(json.filters.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/filters",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Filter (by slug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get filter returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Filter slug matches', function () {",
+                  "  var json = pm.response.json();",
+                  "  var filter = json.filter || json;",
+                  "  pm.expect(filter.slug).to.equal(pm.collectionVariables.get('filterSlug'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/filters/{{filterSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters", "{{filterSlug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Filter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update filter returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated by Postman integration test\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/filters/{{filterSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters", "{{filterSlug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Filter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Test filter returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has match result', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('matches');",
+                  "  pm.expect(json.matches).to.be.a('boolean');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conditions\": [\n    {\n      \"field\": \"headers.content-type\",\n      \"operator\": \"contains\",\n      \"value\": \"json\"\n    }\n  ],\n  \"logic\": \"and\",\n  \"payload\": {\n    \"headers\": {\"content-type\": \"application/json\"},\n    \"body\": {\"test\": true}\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/filters/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters", "test"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Filter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete filter returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms deletion', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/filters/{{filterSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "filters", "{{filterSlug}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Transforms",
+      "item": [
+        {
+          "name": "Create Transform",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create transform returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has transform with id and slug', function () {",
+                  "  var json = pm.response.json();",
+                  "  var t = json.transform || json;",
+                  "  pm.expect(t.id).to.be.a('string');",
+                  "  pm.collectionVariables.set('transformId', t.id);",
+                  "  var slug = t.slug;",
+                  "  pm.expect(slug).to.be.a('string');",
+                  "  pm.collectionVariables.set('transformSlug', slug);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Transform {{testRun}}\",\n  \"slug\": \"postman-tx-{{testRun}}\",\n  \"code\": \"{ \\\"transformed\\\": true, \\\"original\\\": $ }\",\n  \"transformType\": \"jsonata\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Transforms",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List transforms returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has transforms array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.transforms).to.be.an('array');",
+                  "  pm.expect(json.transforms.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transform (by slug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get transform returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Transform slug matches', function () {",
+                  "  var json = pm.response.json();",
+                  "  var t = json.transform || json;",
+                  "  pm.expect(t.slug).to.equal(pm.collectionVariables.get('transformSlug'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms/{{transformSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms", "{{transformSlug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Transform",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Test transform returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has result', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('success');",
+                  "  pm.expect(json).to.have.property('result');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{ \\\"transformed\\\": true, \\\"original\\\": $ }\",\n  \"payload\": {\"event\": \"test\", \"data\": {\"key\": \"value\"}},\n  \"transformType\": \"jsonata\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms", "test"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Export Transform",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Export transform returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms/{{transformSlug}}/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms", "{{transformSlug}}", "export"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Transform",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete transform returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms deletion', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transforms/{{transformSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transforms", "{{transformSlug}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Schemas",
+      "item": [
+        {
+          "name": "Create Schema",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create schema returns 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has schema with id and slug', function () {",
+                  "  var json = pm.response.json();",
+                  "  var s = json.schema || json;",
+                  "  pm.expect(s.id).to.be.a('string');",
+                  "  pm.collectionVariables.set('schemaId', s.id);",
+                  "  pm.expect(s.slug).to.be.a('string');",
+                  "  pm.collectionVariables.set('schemaSlug', s.slug);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Schema {{testRun}}\",\n  \"description\": \"Test JSON schema\",\n  \"jsonSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"event\": { \"type\": \"string\" },\n      \"data\": { \"type\": \"object\" }\n    },\n    \"required\": [\"event\"]\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/schemas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schemas"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Schemas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List schemas returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has schemas array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.schemas).to.be.an('array');",
+                  "  pm.expect(json.schemas.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/schemas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schemas"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Schema (by slug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get schema returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Schema has json_schema', function () {",
+                  "  var json = pm.response.json();",
+                  "  var s = json.schema || json;",
+                  "  pm.expect(s.json_schema || s.jsonSchema).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/schemas/{{schemaSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schemas", "{{schemaSlug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Payload Against Schema",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Validate returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Payload is valid', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.valid).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"event\": \"order.created\",\n    \"data\": {\"orderId\": \"12345\"}\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/schemas/{{schemaSlug}}/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schemas", "{{schemaSlug}}", "validate"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Schema",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete schema returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms deletion', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/schemas/{{schemaSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schemas", "{{schemaSlug}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Routes",
+      "item": [
+        {
+          "name": "Create Route (source → destination)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create route returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has route with id', function () {",
+                  "  var json = pm.response.json();",
+                  "  var route = json.route || json;",
+                  "  pm.expect(route.id).to.be.a('string');",
+                  "  pm.collectionVariables.set('routeId', route.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Route {{testRun}}\",\n  \"sourceId\": \"{{sourceId}}\",\n  \"destinationId\": \"{{destinationId}}\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/routes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Routes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List routes returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has routes array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.routes).to.be.an('array');",
+                  "  pm.expect(json.routes.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Route",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get route returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Route id matches', function () {",
+                  "  var json = pm.response.json();",
+                  "  var route = json.route || json;",
+                  "  pm.expect(route.id).to.equal(pm.collectionVariables.get('routeId'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/{{routeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "{{routeId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Route",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update route returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": 10\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/{{routeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "{{routeId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Route Circuit Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Circuit status returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has circuit state', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('circuitState');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/{{routeId}}/circuit-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "{{routeId}}", "circuit-status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Export Routes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Export routes returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "export"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Ingest Webhook",
+      "item": [
+        {
+          "name": "Send Test Webhook (via ingest URL)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ingest returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms success', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.eventId).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Postman-Test", "value": "{{testRun}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"order.created\",\n  \"data\": {\n    \"orderId\": \"ord_{{testRun}}\",\n    \"amount\": 49.99,\n    \"currency\": \"usd\",\n    \"customer\": {\n      \"email\": \"test@example.com\"\n    }\n  },\n  \"timestamp\": \"{{$isoTimestamp}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{ingestUrl}}",
+              "host": ["{{ingestUrl}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "List Events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List events returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has events array with at least one event', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.events).to.be.an('array');",
+                  "  pm.expect(json.events.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "pm.test('Capture eventId from first event', function () {",
+                  "  var json = pm.response.json();",
+                  "  var eventId = json.events[0].id;",
+                  "  pm.expect(eventId).to.be.a('string');",
+                  "  pm.collectionVariables.set('eventId', eventId);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events?limit=10&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"],
+              "query": [
+                { "key": "limit", "value": "10" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Event",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get event returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has event data', function () {",
+                  "  var json = pm.response.json();",
+                  "  var event = json.event || json;",
+                  "  pm.expect(event.id).to.equal(pm.collectionVariables.get('eventId'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", "{{eventId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Deliveries",
+      "item": [
+        {
+          "name": "List Deliveries",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List deliveries returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has deliveries array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.deliveries).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/deliveries?limit=10&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "deliveries"],
+              "query": [
+                { "key": "limit", "value": "10" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tunnels",
+      "item": [
+        {
+          "name": "Create Tunnel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create tunnel returns 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has tunnel with id', function () {",
+                  "  var json = pm.response.json();",
+                  "  var tunnel = json.tunnel || json;",
+                  "  pm.expect(tunnel.id).to.be.a('string');",
+                  "  pm.collectionVariables.set('tunnelId', tunnel.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Tunnel {{testRun}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Tunnels",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List tunnels returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has tunnels array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.tunnels).to.be.an('array');",
+                  "  pm.expect(json.tunnels.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tunnel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get tunnel returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Tunnel id matches', function () {",
+                  "  var json = pm.response.json();",
+                  "  var tunnel = json.tunnel || json;",
+                  "  pm.expect(tunnel.id).to.equal(pm.collectionVariables.get('tunnelId'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels/{{tunnelId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels", "{{tunnelId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Tunnel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete tunnel returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms deletion', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tunnels/{{tunnelId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tunnels", "{{tunnelId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cron Groups",
+      "item": [
+        {
+          "name": "Create Cron Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create cron group returns 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has group with id and slug', function () {",
+                  "  var json = pm.response.json();",
+                  "  var group = json.group || json;",
+                  "  pm.expect(group.id).to.be.a('string');",
+                  "  pm.collectionVariables.set('cronGroupId', group.id);",
+                  "  var slug = group.slug;",
+                  "  if (slug) pm.collectionVariables.set('cronGroupSlug', slug);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Group {{testRun}}\",\n  \"description\": \"Test cron group\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cron-groups",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron-groups"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Cron Groups",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List cron groups returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has groups array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.groups).to.be.an('array');",
+                  "  pm.expect(json.groups.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron-groups",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron-groups"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cron Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get cron group returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has group data', function () {",
+                  "  var json = pm.response.json();",
+                  "  var group = json.group || json;",
+                  "  pm.expect(group.id).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron-groups/{{cronGroupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron-groups", "{{cronGroupId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Cron Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete cron group returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms deletion', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron-groups/{{cronGroupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron-groups", "{{cronGroupId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cron Jobs",
+      "item": [
+        {
+          "name": "Create Cron Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create cron job returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has cron job with id', function () {",
+                  "  var json = pm.response.json();",
+                  "  var job = json.cronJob || json;",
+                  "  pm.expect(job.id).to.be.a('string');",
+                  "  pm.collectionVariables.set('cronJobId', job.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Cron {{testRun}}\",\n  \"cronExpression\": \"0 0 * * *\",\n  \"url\": \"https://httpbin.org/post\",\n  \"method\": \"POST\",\n  \"description\": \"Test cron job - runs daily at midnight\",\n  \"headers\": {\"X-Test\": \"postman\"},\n  \"payload\": {\"test\": true}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cron",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Cron Jobs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List cron jobs returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has cronJobs array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.cronJobs).to.be.an('array');",
+                  "  pm.expect(json.cronJobs.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cron Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get cron job returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has cron job data', function () {",
+                  "  var json = pm.response.json();",
+                  "  var job = json.cronJob || json;",
+                  "  pm.expect(job.id).to.equal(pm.collectionVariables.get('cronJobId'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron/{{cronJobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron", "{{cronJobId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Cron Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update cron job returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated by Postman integration test\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cron/{{cronJobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron", "{{cronJobId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Trigger Cron Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Trigger cron job returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has execution result', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.execution).to.be.an('object');",
+                  "  pm.expect(json.execution.id).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron/{{cronJobId}}/trigger",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron", "{{cronJobId}}", "trigger"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cron Job Executions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get executions returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has executions array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.executions).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron/{{cronJobId}}/executions?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron", "{{cronJobId}}", "executions"],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Cron Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete cron job returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms deletion', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron/{{cronJobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cron", "{{cronJobId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notification Channels",
+      "item": [
+        {
+          "name": "Create Notification Channel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Notification channels may be feature-gated (paid plans)",
+                  "var status = pm.response.code;",
+                  "if (status === 403) {",
+                  "  pm.test('Notification channels feature-gated (skip)', function () {",
+                  "    pm.expect(status).to.equal(403);",
+                  "    pm.collectionVariables.set('notificationChannelId', '');",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Create notification channel returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('Response has channel with id', function () {",
+                  "    var json = pm.response.json();",
+                  "    var ch = json.channel || json;",
+                  "    pm.expect(ch.id).to.be.a('string');",
+                  "    pm.collectionVariables.set('notificationChannelId', ch.id);",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Channel {{testRun}}\",\n  \"type\": \"webhook\",\n  \"config\": {\n    \"url\": \"https://httpbin.org/post\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Notification Channels",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var status = pm.response.code;",
+                  "if (status === 403) {",
+                  "  pm.test('Feature-gated (skip)', function () { pm.expect(true).to.be.true; });",
+                  "} else {",
+                  "  pm.test('List notification channels returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('Response has channels array', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.channels).to.be.an('array');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notification Channel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var channelId = pm.collectionVariables.get('notificationChannelId');",
+                  "if (!channelId) {",
+                  "  pm.test('Skipped (no channel created)', function () { pm.expect(true).to.be.true; });",
+                  "} else {",
+                  "  pm.test('Get notification channel returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('Response has channel data', function () {",
+                  "    var json = pm.response.json();",
+                  "    var ch = json.channel || json;",
+                  "    pm.expect(ch.id).to.equal(channelId);",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/{{notificationChannelId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", "{{notificationChannelId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Notification Channel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var channelId = pm.collectionVariables.get('notificationChannelId');",
+                  "if (!channelId) {",
+                  "  pm.test('Skipped (no channel created)', function () { pm.expect(true).to.be.true; });",
+                  "} else {",
+                  "  pm.test('Delete notification channel returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('Response confirms deletion', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/{{notificationChannelId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", "{{notificationChannelId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Dashboard Overview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Dashboard returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has dashboard data', function () {",
+                  "  var json = pm.response.json();",
+                  "  // Dashboard may return stats, overview, or full dashboard object",
+                  "  pm.expect(json).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/dashboard?range=7d",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "dashboard"],
+              "query": [
+                { "key": "range", "value": "7d" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Analytics Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Analytics stats returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has stats', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.stats).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Analytics Timeline",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Timeline returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has timeline data', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.timeline).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/timeline?range=7d",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "timeline"],
+              "query": [
+                { "key": "range", "value": "7d" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Analytics Latency",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Latency returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has percentiles', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.percentiles).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/latency",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "latency"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Analytics Errors",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Errors returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/errors",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "errors"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        {
+          "name": "List Audit Logs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Audit logs may be feature-gated for non-admin users",
+                  "var status = pm.response.code;",
+                  "if (status === 403) {",
+                  "  pm.test('Audit logs feature-gated (skip)', function () {",
+                  "    pm.expect(status).to.equal(403);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('List audit logs returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('Response has logs array', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.logs).to.be.an('array');",
+                  "    pm.expect(json).to.have.property('total');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs?limit=10&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit-logs"],
+              "query": [
+                { "key": "limit", "value": "10" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Log Actions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var status = pm.response.code;",
+                  "if (status === 403) {",
+                  "  pm.test('Feature-gated (skip)', function () { pm.expect(true).to.be.true; });",
+                  "} else {",
+                  "  pm.test('Get audit log actions returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('Response has actions array', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.actions).to.be.an('array');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs/actions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit-logs", "actions"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "API Keys",
+      "item": [
+        {
+          "name": "List API Keys",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List API keys returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has apiKeys array', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.apiKeys).to.be.an('array');",
+                  "  pm.expect(json.apiKeys.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/api-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "api-keys"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Delete Route",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete route returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms deletion', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/{{routeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "{{routeId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Source",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete source returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms deletion', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sources/{{sourceSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sources", "{{sourceSlug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Destination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete destination returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms deletion', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/{{destinationSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", "{{destinationSlug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset testRun Variable",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Clear testRun so next collection run generates a new suffix",
+                  "pm.collectionVariables.set('testRun', '');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Health check returns 200 (final sanity check)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.hookbase.app",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "whr_8ffc105e1ab2404481e6cc1e6f6bd603",
+      "type": "string"
+    },
+    {
+      "key": "testRun",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sourceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sourceSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "destinationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "destinationSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "filterId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "filterSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transformId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transformSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "schemaId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "schemaSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "routeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "eventId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tunnelId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cronGroupId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cronGroupSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cronJobId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notificationChannelId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ingestUrl",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
